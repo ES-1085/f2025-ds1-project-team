@@ -8,6 +8,8 @@ output: github_document
 library(tidyverse)
 library(broom)
 ## Add any additional packages you are using here
+#install.packages("jsonlite")
+library(jsonlite)
 ```
 
 ## 1. Introduction
@@ -21,9 +23,11 @@ Text goes here. Refer to the Markdown Quick Reference: Help -> Markdown Quick Re
 Text goes here. Place your data in the /data folder, and add dimensions and codebook to the README in that folder. Then print out the output of glimpse() or skim() of your data frame.
 
 ```{r}
+data <- fromJSON("../data/dataset.json")
 # Code goes here
 # Read in your data file
 # Print the output of glimpse() or skim()
+view(data)
 ```
 
 ## 3. Data analysis plan

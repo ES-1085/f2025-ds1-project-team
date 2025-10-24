@@ -1,6 +1,6 @@
-Project title
+School Energy Usage and Socioeconomic Factors
 ================
-by Team name
+by Team
 
 ## Summary
 
