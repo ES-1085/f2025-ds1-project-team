@@ -7,40 +7,115 @@ output: github_document
 ```{r load-packages, message = FALSE}
 library(tidyverse)
 library(broom)
-## Add any additional packages you are using here
-#install.packages("jsonlite")
+library(skimr)
 library(jsonlite)
 ```
 
 ## 1. Introduction
 
-The introduction should introduce your general research question(s) and your data (where it came from, how it was collected, what are the cases, what are the variables, etc.).
+Our general research question is: How do energy usage trends in New York City public schools vary on a per-student basis, and what geographic and socioeconomic factors are associated with those variations?
 
-Text goes here. Refer to the Markdown Quick Reference: Help -> Markdown Quick Reference. 
+The primary motivation is to identify energy inefficiency hotspots and to explore potential environmental equity issues. We will also estimate carbon costs based on the type and amount of energy used by schools and compare these across neighborhoods of differing financial health.
 
 ## 2. Data
 
-Text goes here. Place your data in the /data folder, and add dimensions and codebook to the README in that folder. Then print out the output of glimpse() or skim() of your data frame.
+We placed our raw data files in the /data folder and created a README in that folder that includes variable definitions and data dimensions.
 
-```{r}
-data <- fromJSON("../data/dataset.json")
-# Code goes here
-# Read in your data file
-# Print the output of glimpse() or skim()
-view(data)
+
+```{r Main Dataset}
+library(jsonlite)
+library(dplyr)
+library(skimr)
+
+data <- fromJSON("../data/dataset.json") %>%
+  as_tibble()
+glimpse(data)
+skim(data)
+
 ```
 
+```{r Finance Dataset}
+library(readr)
+library(dplyr)
+library(skimr)
+
+wealth <- read_csv("../data/Neighborhood_Financial_Health_Digital_Mapping_and_Data_Tool.csv")
+glimpse(wealth)
+skim(wealth)
+```
+
+```{r Enrollment Dataset}
+library(readr)
+library(dplyr)
+library(skimr)
+
+enrollment <- read_csv("../data/Enrollment.csv")
+glimpse(enrollment)
+skim(enrollment)
+```
 ## 3. Data analysis plan
 
-Text goes here.
-- What variables will you visualize to explore your research questions?
-- Will there be any other data that you need to find to help with your research question?
-- Very preliminary exploratory data analysis, including some summary statistics and visualizations, along with some explanation on how they help you learn more about your data. (You can add to these later as you work on your project.)
-- The data visualization(s) that you believe will be useful in exploring your question(s). (You can update these later as you work on your project.)
+Our analysis will explore patterns of energy use per student across New York City public schools, linking them with neighborhood financial health indicators.
 
+We will visualize and quantify how energy consumption and estimated carbon emissions differ by borough and neighborhood wealth. 
 
-```{r}
-# Code goes here
-# Code to calculate summary statistics
-# Code for a visualization
+We included two sample graphs that we may end up using.
+
+**Planned analyses**
+
+1. Normalization: Compute energy per student for each school.
+
+2. Carbon estimation: Apply EPA emission factors by energy type (electricity, gas, steam).
+
+3. Geographic comparisons: Aggregate by borough and neighborhood.
+
+4. Socioeconomic correlation: Compare energy intensity with income and financial-health indicators.
+
+5. Outlier detection: Identify schools with unusually high per-student usage.
+
+**Preliminary exploratory analysis**
+
+```{r energy-summary, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+
+energy_summary <- energy %>%
+  filter(grepl("Total Usage", measurement, ignore.case = TRUE)) %>%
+  mutate(across(starts_with(c("aug", "sep", "oct", "nov", "dec","jan", "feb", "mar", "apr", "may", "jun")), as.numeric)) %>%
+  rowwise() %>%
+  mutate(avg_monthly_usage = mean(c_across(starts_with(c("aug", "sep", "oct", "nov", "dec","jan", "feb", "mar", "apr", "may", "jun"))), na.rm = TRUE)) %>%
+  ungroup() %>%
+  group_by(borough) %>%
+  summarise(avg_usage_mmbtu = mean(avg_monthly_usage, na.rm = TRUE))
+
+energy_summary
+
+ggplot(energy_summary, aes(x = borough, y = avg_usage_mmbtu)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Average Monthly Total Energy Usage by Borough",
+    x = "Borough",
+    y = "Average Total Usage (MMBtu)"
+  ) +
+  theme_minimal()
+```
+```{r energy-boxplot, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+
+energy_box <- energy %>%
+  filter(grepl("Total Usage", measurement, ignore.case = TRUE)) %>%
+  mutate(across(starts_with(c("aug", "sep", "oct", "nov", "dec","jan", "feb", "mar", "apr", "may", "jun")), as.numeric)) %>%
+  rowwise() %>%
+  mutate(avg_monthly_usage = mean(c_across(starts_with(c("aug", "sep", "oct", "nov", "dec","jan", "feb", "mar", "apr", "may", "jun"))), na.rm = TRUE)) %>%
+  ungroup()
+
+ggplot(energy_box, aes(x = borough, y = avg_monthly_usage)) +
+  geom_boxplot(fill = "darkorange", alpha = 0.7) +
+  labs(
+    title = "Distribution of Average Monthly Energy Usage by Borough",
+    x = "Borough",
+    y = "Average Monthly Usage (MMBtu)"
+  ) +
+  theme_minimal()
 ```
