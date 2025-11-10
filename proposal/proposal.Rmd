@@ -118,4 +118,36 @@ ggplot(energy_box, aes(x = borough, y = avg_monthly_usage)) +
     y = "Average Monthly Usage (MMBtu)"
   ) +
   theme_minimal()
+ggsave(
+  "energy_boxplot.png",
+  plot = get_last_plot(),
+  device = NULL,
+  path = NULL,
+  scale = 1,
+  width = NA,
+  height = NA,
+  units = c("in", "cm", "mm", "px"),
+  dpi = 300,
+  limitsize = TRUE,
+  bg = NULL,
+  create.dir = FALSE,
+)
 ```
+
+```{r}
+ggsave(
+  "plot",
+  plot = get_last_plot(),
+  device = NULL,
+  path = NULL,
+  scale = 1,
+  width = NA,
+  height = NA,
+  units = c("in", "cm", "mm", "px"),
+  dpi = 300,
+  limitsize = TRUE,
+  bg = NULL,
+  create.dir = FALSE,
+)
+```
+
