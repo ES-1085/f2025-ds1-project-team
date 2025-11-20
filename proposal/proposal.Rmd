@@ -146,6 +146,87 @@ p <- ggplot(borough_totals) +
 
 ```
 
+```{r}
+library(tidyverse)
+library(readxl)
+library(viridis)
+
+energy <- as_tibble(data)
+
+demo <- read_excel("../data/enrollment-public-district-2024-25-all-students.xlsx",
+                   sheet = "public-district-2024-25")
+
+nyc_dists <- demo |>
+  filter(
+    County %in% c("BRONX", "KINGS", "NEW YORK", "QUEENS", "RICHMOND"),
+    `Subgroup Name` == "All Students"
+  ) |>
+  mutate(
+    borough = case_when(
+      County == "NEW YORK" ~ "Manhattan",
+      County == "BRONX" ~ "Bronx",
+      County == "KINGS" ~ "Brooklyn",
+      County == "QUEENS" ~ "Queens",
+      County == "RICHMOND" ~ "Staten Island",
+      TRUE ~ NA_character_
+    ),
+    `PreK-12 Total` = readr::parse_number(`PreK-12 Total`)
+  ) |>
+  filter(!is.na(borough)) |>
+  select(borough, `PreK-12 Total`)
+
+enroll_borough <- nyc_dists |>
+  group_by(borough) |>
+  summarise(total_students = sum(`PreK-12 Total`, na.rm = TRUE), .groups = "drop")
+
+energy_type <- "Total Usage (mmBTUs)"
+
+energy_filtered <- energy |>
+  filter(measurement == energy_type)
+
+usage_cols <- energy_filtered |>
+  select(
+    -building_address, -borough, -measurement, -postcode, -latitude,
+    -longitude, -community_board, -council_district, -census_tract,
+    -bin, -bbl, -nta
+  ) |>
+  colnames()
+
+energy_numeric <- energy_filtered |>
+  mutate(across(all_of(usage_cols), ~ suppressWarnings(as.numeric(.)))) |>
+  mutate(
+    total_energy = rowSums(across(all_of(usage_cols)), na.rm = TRUE),
+    borough = factor(
+      borough,
+      levels = c("1","2","3","4","5"),
+      labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+    )
+  )
+
+energy_borough <- energy_numeric |>
+  group_by(borough) |>
+  summarise(total_energy = sum(total_energy, na.rm = TRUE), .groups = "drop")
+
+per_capita <- energy_borough |>
+  inner_join(enroll_borough, by = "borough") |>
+  mutate(energy_per_student = total_energy / total_students)
+
+ggplot(per_capita) +
+  geom_col(aes(
+    x = fct_reorder(borough, energy_per_student),
+    y = energy_per_student,
+    fill = borough
+  )) +
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Energy Per Student by Borough",
+    x = "Borough",
+    y = "mmBTUs per student"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
 
 
 ```{r energy-boxplot, message=FALSE, warning=FALSE}
