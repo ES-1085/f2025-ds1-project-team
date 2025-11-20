@@ -1,6 +1,6 @@
 ---
 title: "Project proposal"
-author: "Team name"
+author: "Jack, Margaret, Ben"
 output: github_document
 ---
 
@@ -33,6 +33,7 @@ glimpse(data)
 skim(data)
 
 ```
+
 
 ```{r Finance Dataset}
 library(readr)
@@ -75,44 +76,77 @@ We included two sample graphs that we may end up using.
 
 **Preliminary exploratory analysis**
 
-```{r energy-summary, message=FALSE, warning=FALSE}
-library(dplyr)
-library(ggplot2)
+```{r message=FALSE}
+# Total energy usage per borough
 
-energy_summary <- energy %>%
-  filter(grepl("Total Usage", measurement, ignore.case = TRUE)) %>%
-  mutate(across(starts_with(c("aug", "sep", "oct", "nov", "dec","jan", "feb", "mar", "apr", "may", "jun")), as.numeric)) %>%
-  rowwise() %>%
-  mutate(avg_monthly_usage = mean(c_across(starts_with(c("aug", "sep", "oct", "nov", "dec","jan", "feb", "mar", "apr", "may", "jun"))), na.rm = TRUE)) %>%
-  ungroup() %>%
-  group_by(borough) %>%
-  summarise(avg_usage_mmbtu = mean(avg_monthly_usage, na.rm = TRUE))
+library(tidyverse)
+library(viridis)
 
-energy_summary
+energy <- as_tibble(data)
 
-ggplot(energy_summary, aes(x = borough, y = avg_usage_mmbtu)) +
-  geom_col(fill = "steelblue") +
+energy_type <- "Total Usage (mmBTUs)"
+
+energy_filtered <- energy |>
+  filter(measurement == energy_type)
+
+usage_cols <- energy_filtered |>
+  select(
+    -building_address,
+    -borough,
+    -measurement,
+    -postcode,
+    -latitude,
+    -longitude,
+    -community_board,
+    -council_district,
+    -census_tract,
+    -bin,
+    -bbl,
+    -nta
+  ) |>
+  colnames()
+
+energy_numeric <- energy_filtered |>
+  mutate(across(all_of(usage_cols), ~ suppressWarnings(as.numeric(.)))) |>
+  mutate(total_energy = rowSums(across(all_of(usage_cols)), na.rm = TRUE)) |>
+  mutate(
+    borough_name = factor(
+      borough,
+      levels = c("1","2","3","4","5"),
+      labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+    )
+  )
+
+borough_totals <- energy_numeric |>
+  group_by(borough_name) |>
+  summarise(
+    total_energy_borough = sum(total_energy, na.rm = TRUE)
+  )
+
+ggplot(borough_totals) +
+  geom_col(aes(
+    x = borough_name,
+    y = total_energy_borough,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D", name = "Borough Name") + 
   labs(
-    title = "Average Monthly Total Energy Usage by Borough",
+    title = paste0(energy_type, " by Borough"),
     x = "Borough",
-    y = "Average Total Usage (MMBtu)"
+    y = energy_type
   ) +
   theme_minimal()
-ggsave(
-  "energy_boxplot2.png",
-  plot = get_last_plot(),
-  device = NULL,
-  path = NULL,
-  scale = 1,
-  width = NA,
-  height = NA,
-  units = c("in", "cm", "mm", "px"),
-  dpi = 300,
-  limitsize = TRUE,
-  bg = NULL,
-  create.dir = FALSE,
-)
+p <- ggplot(borough_totals) +
+  geom_col(aes(
+    x = borough_name,
+    y = total_energy_borough,
+    fill = borough_name
+  ))
+
 ```
+
+
+
 ```{r energy-boxplot, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
@@ -164,4 +198,5 @@ ggsave(
   create.dir = FALSE,
 )
 ```
+
 
