@@ -135,13 +135,14 @@ ggplot(borough_totals) +
     x = "Borough",
     y = energy_type
   ) +
-  theme_minimal()
+  theme_minimal() + theme(legend.position = "none")
 p <- ggplot(borough_totals) +
   geom_col(aes(
     x = borough_name,
     y = total_energy_borough,
     fill = borough_name
-  ))
+  )) 
+   
 
 ```
 
