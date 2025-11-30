@@ -257,21 +257,41 @@ ggsave(
 )
 ```
 
-```{r}
-ggsave(
-  "plot",
-  plot = get_last_plot(),
-  device = NULL,
-  path = NULL,
-  scale = 1,
-  width = NA,
-  height = NA,
-  units = c("in", "cm", "mm", "px"),
-  dpi = 300,
-  limitsize = TRUE,
-  bg = NULL,
-  create.dir = FALSE,
-)
-```
 
+```{r}
+library(tidyverse)
+library(viridis)
+
+# Clean Borough and ensure income is numeric
+wealth_boro <- df |>
+  mutate(
+    Borough = str_trim(Borough),
+    Median_Income = suppressWarnings(as.numeric(Median_Income))
+  ) |>
+  filter(!is.na(Borough), !is.na(Median_Income)) |>
+  group_by(Borough) |>
+  summarise(median_income = median(Median_Income, na.rm = TRUE), .groups = "drop")
+
+# Use same palette as earlier borough plots if available; otherwise create one
+pal <- if (exists("pal")) pal else setNames(
+  viridis(5, option = "D"),
+  c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+)
+
+ggplot(wealth_boro) +
+  geom_col(aes(
+    x = fct_reorder(Borough, median_income),
+    y = median_income,
+    fill = Borough
+  )) +
+  scale_fill_manual(values = pal) +
+  labs(
+    title = "Wealth Per Capita (Proxy) by Borough",
+    subtitle = "Proxy = Median household income",
+    x = "Borough",
+    y = "Median household income (USD)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
 
