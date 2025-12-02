@@ -9,6 +9,40 @@ This document should contain a detailed account of the data clean up for your da
 ```{r load-packages, message = FALSE}
 library(tidyverse)
 library(broom)
+library(tidyverse)
+library(broom)
+library(skimr)
+library(jsonlite)
+```
+
+```{r Enrollment Dataset}
+library(readr)
+library(dplyr)
+library(skimr)
+
+enrollment <- read_csv("../data/Enrollment.csv")
+glimpse(enrollment)
+skim(enrollment)
+```
+```{r Finance Dataset}
+library(readr)
+library(dplyr)
+library(skimr)
+
+wealth <- read_csv("../data/Neighborhood_Financial_Health_Digital_Mapping_and_Data_Tool.csv")
+glimpse(wealth)
+skim(wealth)
+```
+```{r Main Dataset}
+library(jsonlite)
+library(dplyr)
+library(skimr)
+
+data <- fromJSON("../data/dataset.json") %>%
+  as_tibble()
+glimpse(data)
+skim(data)
+
 ```
 
 ## Data Clean Up Steps for Overall Data
@@ -66,6 +100,68 @@ These data cleaning sections are optional and depend on if you have some data cl
 
 
 ### Plot 2: _________
+```{r message=FALSE}
+# Total energy usage per borough
+
+library(tidyverse)
+library(viridis)
+
+energy <- as_tibble(data)
+
+energy_type <- "Total Usage (mmBTUs)"
+
+energy_filtered <- energy |>
+  filter(measurement == energy_type)
+
+usage_cols <- energy_filtered |>
+  select(
+    -building_address,
+    -borough,
+    -measurement,
+    -postcode,
+    -latitude,
+    -longitude,
+    -community_board,
+    -council_district,
+    -census_tract,
+    -bin,
+    -bbl,
+    -nta
+  ) |>
+  colnames()
+
+energy_numeric <- energy_filtered |>
+  mutate(across(all_of(usage_cols), ~ suppressWarnings(as.numeric(.)))) |>
+  mutate(total_energy = rowSums(across(all_of(usage_cols)), na.rm = TRUE)) |>
+  mutate(
+    borough_name = factor(
+      borough,
+      levels = c("1","2","3","4","5"),
+      labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+    )
+  )
+
+borough_totals <- energy_numeric |>
+  group_by(borough_name) |>
+  summarise(
+    total_energy_borough = sum(total_energy, na.rm = TRUE)
+  )
+
+ggplot(borough_totals) +
+  geom_col(aes(
+    x = borough_name,
+    y = total_energy_borough,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D", name = "Borough Name") + 
+  labs(
+    title = paste0(energy_type, " by Borough"),
+    x = "Borough",
+    y = energy_type
+  ) +
+  theme_minimal() + theme(legend.position = "none")
+
+```
 
 ### Plot 3: ___________
 
