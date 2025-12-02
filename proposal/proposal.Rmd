@@ -295,3 +295,35 @@ ggplot(wealth_boro) +
   theme(legend.position = "none")
 ```
 
+```{r}
+library(tidyverse)
+library(viridis)
+
+wealth_df <- df |>
+  mutate(Borough = str_trim(Borough),
+         Median_Income = suppressWarnings(as.numeric(Median_Income))) |>
+  filter(!is.na(Borough), !is.na(Median_Income)) |>
+  group_by(Borough) |>
+  summarise(median_income = median(Median_Income, na.rm = TRUE), .groups = "drop") |>
+  rename(borough = Borough)
+
+compare_df <- per_capita |>
+  select(borough, energy_per_student, total_energy, total_students) |>
+  inner_join(wealth_df, by = "borough")
+
+boro_order <- per_capita |> arrange(desc(energy_per_student)) |> pull(borough) |> as.character()
+pal <- if (exists("pal")) pal else setNames(viridis(5, option = "D"), boro_order)
+
+p_scatter <- ggplot(compare_df) +
+  geom_point(aes(x = median_income, y = energy_per_student, color = borough), size = 4) +
+  geom_text(aes(x = median_income, y = energy_per_student, label = borough, color = borough),
+            vjust = -1, size = 4, show.legend = FALSE) +
+  scale_color_manual(values = pal) +
+  labs(title = "Energy per Student vs Median Income by Borough",
+       x = "Median household income (USD)",
+       y = "mmBTUs per student") +
+  theme_minimal() + theme(legend.position = "none")
+
+p_scatter
+```
+
