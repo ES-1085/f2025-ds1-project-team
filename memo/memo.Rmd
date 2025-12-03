@@ -4,8 +4,13 @@ author: "Jack, Margaret, Ben"
 output: github_document
 ---
 
-This document should contain a detailed account of the data clean up for your data and the design choices you are making for your plots. For instance you will want to document choices you've made that were intentional for your graphic, e.g. color you've chosen for the plot. Think of this document as a code script someone can follow to reproduce the data cleaning steps and graphics in your handout.
-
+Design choices: 
+Standardized coloring for burrows to enhance readability between graphs
+Virdits colorblind safe for our palette 
+Legends removed to increase plot size & reduce clutter because categories are already on axis
+Per student normalization to control for enrollment differences 
+Borough mapping via county to increase readability / familiairity
+Alt text to encourage accessibility  
 
 ## Data Clean Up Steps for Overall Data
 
@@ -283,3 +288,198 @@ ggplot(energy_box_numeric, aes(
   theme_minimal()
 
 ```
+### Final Plot 4
+```{r}
+wealth_source <- if (exists("df")) {
+  df
+} else {
+  wealth_file <- list.files("../data", pattern = "(?i)Neighborhood_Financial_Health.*\\.csv$", full.names = TRUE)
+  readr::read_csv(wealth_file[1], show_col_types = FALSE)
+}
+
+bcols <- names(wealth_source)
+borough_col <- bcols[grepl("^borough$", bcols, ignore.case = TRUE) | grepl("^boro(ugh)?s?$", bcols, ignore.case = TRUE)]
+if (length(borough_col) == 0) stop("Could not find a 'Borough' column. Columns are: ", paste(bcols, collapse = ", "))
+
+income_candidates <- c("Median_Income","Median_Household_Income","Income","median_income","median_household_income","income")
+income_col <- bcols[match(tolower(income_candidates), tolower(bcols), nomatch = 0)]
+if (length(income_col) == 0) stop("Could not find an income column. Looked for: ", paste(income_candidates, collapse = ", "),
+                                  ". Columns are: ", paste(bcols, collapse = ", "))
+income_col <- income_col[1]
+
+wealth_boro <- wealth_source |>
+  mutate(
+    borough_std = stringr::str_trim(.data[[borough_col[1]]]),
+    income_val  = suppressWarnings(as.numeric(.data[[income_col]]))
+  ) |>
+  filter(!is.na(borough_std), !is.na(income_val)) |>
+  group_by(borough_std) |>
+  summarise(median_income = median(income_val, na.rm = TRUE), .groups = "drop") |>
+  rename(borough = borough_std)
+
+pal <- if (exists("pal")) pal else setNames(
+  viridis(5, option = "D"),
+  c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+)
+
+p4 <- ggplot(wealth_boro) +
+  geom_col(aes(x = fct_reorder(borough, median_income), y = median_income, fill = borough)) +
+  scale_fill_manual(values = pal) +
+  labs(
+    title = "Wealth Per Capita (Proxy) by Borough",
+    subtitle = "Proxy = Median household income",
+    x = "Borough",
+    y = "Median household income (USD)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p4
+```
+
+```{r plots-PNG}
+p1 <- ggplot(borough_totals) +
+  geom_col(aes(
+    x = borough_name,
+    y = total_energy_borough,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = paste0(energy_type, " by Borough"),
+    x = "Borough",
+    y = energy_type
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p1
+ggsave("plot1-total-usage-by-borough.png", p1, width = 6, height = 4, dpi = 300)
+
+p2 <- ggplot(per_capita) +
+  geom_col(aes(
+    x = fct_reorder(borough_name, energy_per_student),
+    y = energy_per_student,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Energy Per Student by Borough",
+    x = "Borough",
+    y = "mmBTUs per student"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p2
+ggsave("plot2-energy-per-student.png", p2, width = 6, height = 4, dpi = 300)
+
+p3 <- ggplot(energy_box_numeric, aes(
+  x = borough,
+  y = avg_monthly_usage
+)) +
+  geom_boxplot(fill = "darkorange", alpha = 0.7) +
+  labs(
+    title = "Distribution of Average Monthly Energy Usage by Borough",
+    x = "Borough",
+    y = "Average Monthly Usage (MMBtu)"
+  ) +
+  theme_minimal()
+
+p3
+ggsave("plot3-monthly-usage-boxplot.png", p3, width = 6, height = 4, dpi = 300)
+
+p4 <- ggplot(wealth_boro) +
+  geom_col(aes(x = fct_reorder(borough, median_income), y = median_income, fill = borough)) +
+  scale_fill_manual(values = pal) +
+  labs(
+    title = "Wealth Per Capita (Proxy) by Borough",
+    subtitle = "Proxy = Median household income",
+    x = "Borough",
+    y = "Median household income (USD)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p4
+ggsave("plot4-wealth-per-capita-by-borough.png", p4, width = 6, height = 4, dpi = 300)
+```
+###Final Plot 5
+```{r}
+# --- factors (units -> MMBtu or direct kg CO2) ---
+kwh_to_mmbtu   <- 0.003412
+mlb_to_mmbtu   <- 1.19            # 1,000 lb steam ≈ 1.19 MMBtu (approx.)
+therm_to_mmbtu <- 0.1
+gal_no2_to_mmbtu <- 0.1387
+gal_no4_to_mmbtu <- 0.145
+gal_no56_to_mmbtu <- 0.150
+
+kg_per_mmbtu_gas   <- 53.06
+kg_per_mmbtu_oil2  <- 73.16
+kg_per_mmbtu_oil4  <- 75.29
+kg_per_mmbtu_oil56 <- 78.80
+kg_per_kwh_grid    <- 0.25       
+usage_cols_all <- energy |>
+  select(-building_address, -borough, -measurement, -postcode, -latitude,
+         -longitude, -community_board, -council_district, -census_tract,
+         -bin, -bbl, -nta) |>
+  colnames()
+
+carbon_ready <- energy |>
+  mutate(across(all_of(usage_cols_all), ~ suppressWarnings(as.numeric(.))),
+         total_raw = rowSums(across(all_of(usage_cols_all)), na.rm = TRUE),
+         fuel = case_when(
+           str_detect(measurement, "(?i)electric") ~ "electricity",
+           str_detect(measurement, "(?i)steam")    ~ "steam",
+           str_detect(measurement, "(?i)gas|therm")~ "natural_gas",
+           str_detect(measurement, "(?i)oil.*2")   ~ "oil_2",
+           str_detect(measurement, "(?i)oil.*4")   ~ "oil_4",
+           str_detect(measurement, "(?i)oil.*(5|6)") ~ "oil_56",
+           str_detect(measurement, "(?i)total usage") ~ "total_mmbtu", 
+           TRUE ~ "other"
+         ),
+         borough_name = factor(
+           borough,
+           levels = c("1","2","3","4","5"),
+           labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+         )) |>
+  filter(fuel %in% c("electricity","steam","natural_gas","oil_2","oil_4","oil_56"))
+
+carbon_by_row <- carbon_ready |>
+  mutate(
+    kg_co2 = case_when(
+      fuel == "electricity" ~ total_raw * kg_per_kwh_grid,                               # kWh * kg/kWh
+      fuel == "steam"       ~ total_raw * mlb_to_mmbtu * kg_per_mmbtu_gas,               # mlb -> MMBtu -> kg
+      fuel == "natural_gas" ~ total_raw * therm_to_mmbtu * kg_per_mmbtu_gas,             # therm -> MMBtu
+      fuel == "oil_2"       ~ total_raw * gal_no2_to_mmbtu * kg_per_mmbtu_oil2,          # gal -> MMBtu
+      fuel == "oil_4"       ~ total_raw * gal_no4_to_mmbtu * kg_per_mmbtu_oil4,
+      fuel == "oil_56"      ~ total_raw * gal_no56_to_mmbtu * kg_per_mmbtu_oil56,
+      TRUE ~ NA_real_
+    )
+  )
+
+carbon_borough <- carbon_by_row |>
+  group_by(borough_name) |>
+  summarise(kg_co2 = sum(kg_co2, na.rm = TRUE), .groups = "drop") |>
+  mutate(t_co2 = kg_co2 / 1000)
+
+if (!exists("pal")) {
+  pal <- setNames(viridis(5, option = "D"),
+                  c("Manhattan","Bronx","Brooklyn","Queens","Staten Island"))
+}
+
+p5 <- ggplot(carbon_borough) +
+  geom_col(aes(x = fct_reorder(borough_name, t_co2),
+               y = t_co2,
+               fill = borough_name)) +
+  scale_fill_manual(values = pal) +
+  labs(title = "Estimated Carbon Emissions by Borough",
+       x = "Borough",
+       y = "tCO2 (estimated)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p5
+ggsave("plot5-carbon-by-borough.png", p5, width = 6, height = 4, dpi = 300)
+```
+
