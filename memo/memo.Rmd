@@ -307,6 +307,3 @@ ggplot(energy_box_numeric, aes(
   theme_minimal()
 
 ```
-
-### Plot 4: ___________ 
-
