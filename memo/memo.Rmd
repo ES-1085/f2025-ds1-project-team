@@ -6,33 +6,18 @@ output: github_document
 
 This document should contain a detailed account of the data clean up for your data and the design choices you are making for your plots. For instance you will want to document choices you've made that were intentional for your graphic, e.g. color you've chosen for the plot. Think of this document as a code script someone can follow to reproduce the data cleaning steps and graphics in your handout.
 
-```{r load-packages, message = FALSE}
-library(tidyverse)
-library(broom)
+
+## Data Clean Up Steps for Overall Data
+
+### Step 1: Import Packages
+```{r load-packages}
 library(tidyverse)
 library(broom)
 library(skimr)
 library(jsonlite)
 ```
 
-```{r Enrollment Dataset}
-library(readr)
-library(dplyr)
-library(skimr)
-
-enrollment <- read_csv("../data/Enrollment.csv")
-glimpse(enrollment)
-skim(enrollment)
-```
-```{r Finance Dataset}
-library(readr)
-library(dplyr)
-library(skimr)
-
-wealth <- read_csv("../data/Neighborhood_Financial_Health_Digital_Mapping_and_Data_Tool.csv")
-glimpse(wealth)
-skim(wealth)
-```
+### Step 2: Import Datasets
 ```{r Main Dataset}
 library(jsonlite)
 library(dplyr)
@@ -44,16 +29,123 @@ glimpse(data)
 skim(data)
 
 ```
+```{r Finance Dataset}
+library(readr)
+library(dplyr)
+library(skimr)
 
-## Data Clean Up Steps for Overall Data
+wealth <- read_csv("../data/Neighborhood_Financial_Health_Digital_Mapping_and_Data_Tool.csv")
+glimpse(wealth)
+skim(wealth)
+```
+```{r Enrollment Dataset}
+library(readr)
+library(dplyr)
+library(skimr)
 
-### Step 1: _________
+enrollment <- read_csv("../data/Enrollment.csv")
+glimpse(enrollment)
+skim(enrollment)
+```
 
-```{r}
+### Step 10: Import and Filter Enrollment Dataset
+```{r import-enrollment}
+demo <- readxl::read_excel(
+  "../data/enrollment-public-district-2024-25-all-students.xlsx",
+  sheet = "public-district-2024-25"
+)
 
 ```
 
-### Step 2: ________
+### Step 11: Standardize Borough Names and Parse Enrollment
+
+```{r parse-enrollment}
+nyc_dists <- demo |>
+  filter(
+    County %in% c("BRONX", "KINGS", "NEW YORK", "QUEENS", "RICHMOND"),
+    `Subgroup Name` == "All Students"
+  ) |>
+  mutate(
+    borough = case_when(
+      County == "NEW YORK" ~ "Manhattan",
+      County == "BRONX" ~ "Bronx",
+      County == "KINGS" ~ "Brooklyn",
+      County == "QUEENS" ~ "Queens",
+      County == "RICHMOND" ~ "Staten Island"
+    ),
+    `PreK-12 Total` = readr::parse_number(`PreK-12 Total`)
+  ) |>
+  select(borough, `PreK-12 Total`)
+
+```
+
+### Step 12: Aggregate Enrollment Totals by Borough
+```{r aggregate-enrollment}
+enroll_borough <- nyc_dists |>
+  group_by(borough) |>
+  summarise(total_students = sum(`PreK-12 Total`, na.rm = TRUE))
+
+```
+
+### Step 13: Aggregate Energy by Borough 
+```{r aggregate-energy}
+energy_borough <- energy_numeric |>
+  group_by(borough_name) |>
+  summarise(total_energy = sum(total_energy, na.rm = TRUE))
+
+```
+
+### Step 14: Compute Energy per Student
+```{r energy-per-student}
+per_capita <- energy_borough |>
+  inner_join(enroll_borough, by = c("borough_name" = "borough")) |>
+  mutate(energy_per_student = total_energy / total_students)
+```
+
+### Step 15: Filter Rows for Total Energy Usage
+```{r filter-rows}
+energy_box <- energy |>
+  filter(grepl("Total Usage", measurement, ignore.case = TRUE))
+
+```
+
+### Step 16: Convert Monthly Columns to Numeric
+```{r monthly-to-numeric}
+energy_box_numeric <- energy_box |>
+  mutate(across(
+    starts_with(c("aug","sep","oct","nov","dec","jan","feb","mar","apr","may","jun")),
+    ~ suppressWarnings(as.numeric(.))
+  ))
+
+```
+
+### Step 17: Get Average Monthly Usage
+```{r monthly-average-usage}
+energy_box_numeric <- energy_box_numeric |>
+  rowwise() |>
+  mutate(
+    avg_monthly_usage = mean(
+      c_across(starts_with(c("aug","sep","oct","nov","dec","jan","feb","mar","apr","may","jun"))),
+      na.rm = TRUE
+    )
+  ) |>
+  ungroup()
+
+```
+
+### Step 18: Compute Borough Medians
+```{r medians}
+wealth_boro <- wealth |>
+  mutate(
+    Borough = stringr::str_trim(Borough),
+    Median_Income = suppressWarnings(as.numeric(Median_Income))
+  ) |>
+  filter(!is.na(Borough), !is.na(Median_Income)) |>
+  group_by(Borough) |>
+  summarise(median_income = median(Median_Income, na.rm = TRUE))
+
+```
+
 
 ## Plots
 
@@ -81,20 +173,100 @@ ggsave("example-starwars-wide.png", width = 6, height = 4)
 
 
 
-### Plot 1: _________
+### Plot 1: Total Usage by Borough 
 
 #### Data cleanup steps specific to plot 1
 
-These data cleaning sections are optional and depend on if you have some data cleaning steps specific to a particular plot
+### Step 1: Convert Raw Dataset
+```{r dataset-to-tibble}
+energy <- as_tibble(data)
+```
 
-```{r}
+### Step 2: Filter Energy Dataset
+
+```{r filter-energy}
+energy_type <- "Total Usage (mmBTUs)"
+
+energy_filtered <- energy |>
+  filter(measurement == energy_type)
 
 ```
 
+### Step 3: Select Columns in Energy Dataset
+```{r select-energy}
+usage_cols <- energy_filtered |>
+  select(
+    -building_address,
+    -borough,
+    -measurement,
+    -postcode,
+    -latitude,
+    -longitude,
+    -community_board,
+    -council_district,
+    -census_tract,
+    -bin,
+    -bbl,
+    -nta
+  ) |>
+  colnames()
+
+```
+
+### Step 4: Convert Columns to Numeric
+
+```{r energy-to-numeric}
+energy_numeric <- energy_filtered |>
+  mutate(across(all_of(usage_cols), ~ suppressWarnings(as.numeric(.))))
+
+```
+
+### Step 5: Compute Total Energy per School
+
+```{r energy-per-school}
+energy_numeric <- energy_numeric |>
+  mutate(total_energy = rowSums(across(all_of(usage_cols)), na.rm = TRUE))
+
+```
+
+### Step 6: Borough Numbers to Names
+```{r Borough-to-names}
+energy_numeric <- energy_numeric |>
+  mutate(
+    borough_name = factor(
+      borough,
+      levels = c("1","2","3","4","5"),
+      labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+    )
+  )
+
+```
+
+### Step 7: Aggregate by Borough
+```{r aggregate-by-borough}
+borough_totals <- energy_numeric |>
+  group_by(borough_name) |>
+  summarise(total_energy_borough = sum(total_energy, na.rm = TRUE))
+
+```
 
 #### Final Plot 1
 
-```{r}
+```{r plot-1}
+ggplot(borough_totals) +
+  geom_col(aes(
+    x = borough_name,
+    y = total_energy_borough,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = paste0(energy_type, " by Borough"),
+    x = "Borough",
+    y = energy_type
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
 
 ```
 
