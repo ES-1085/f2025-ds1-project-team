@@ -10,6 +10,7 @@ Virdits colorblind safe for our palette
 Legends removed to increase plot size & reduce clutter because categories are already on axis
 Per student normalization to control for enrollment differences 
 Borough mapping via county to increase readability / familiairity
+Alt text to encourage accessibility  
 
 ## Data Clean Up Steps for Overall Data
 
