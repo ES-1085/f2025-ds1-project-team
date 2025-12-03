@@ -146,13 +146,8 @@ library(viridis)
 
 energy <- as_tibble(data)
 
-<<<<<<< HEAD
-demo <- readxl::read_excel("../data/enrollment-public-district-2024-25-all-students.xlsx",
-                           sheet = "public-district-2024-25")
-=======
-demo <- read_csv("../data/Enrollment.csv",
+demo <- read_excel("../data/enrollment-public-district-2024-25-all-students.xlsx",
                    sheet = "public-district-2024-25")
->>>>>>> a93df37ab38465982f3ba2e6413a7691a1f39c8b
 
 nyc_dists <- demo |>
   filter(
