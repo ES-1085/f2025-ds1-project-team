@@ -272,7 +272,7 @@ wealth_boro <- df |>
   group_by(Borough) |>
   summarise(median_income = median(Median_Income, na.rm = TRUE), .groups = "drop")
 
-# Use same palette as earlier borough plots if available; otherwise create one
+# Use same palette as earlier borough plots if available; otherwise create one -- no fix this so they match in memo doc
 pal <- if (exists("pal")) pal else setNames(
   viridis(5, option = "D"),
   c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
