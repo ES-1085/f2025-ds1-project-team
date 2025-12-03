@@ -304,7 +304,70 @@ ggplot(wealth_boro) +
 ```
 
 ```{r}
+library(tidyverse)
+library(viridis)
+library(scales)
 
+wealth_file <- list.files("../data",
+                          pattern = "(?i)Neighborhood_Financial_Health.*\\.csv$",
+                          full.names = TRUE)
+stopifnot(length(wealth_file) >= 1)
+
+wealth_raw <- readr::read_csv(wealth_file[1], show_col_types = FALSE)
+
+wealth <- wealth_raw |>
+  rename_with(~ gsub("[^A-Za-z0-9]+", "_", .x)) |>
+  rename_with(~ tolower(.x))
+
+if (!"borough" %in% names(wealth)) {
+  stop("No 'borough' column in the wealth CSV. Columns are: ",
+       paste(names(wealth), collapse = ", "))
+}
+
+income_col <- c("median_income", "median_household_income", "income", "medianincome")
+have_income <- income_col[income_col %in% names(wealth)]
+if (length(have_income) == 0) {
+  stop("No income column found. Looked for: ",
+       paste(income_col, collapse = ", "), 
+       ". Columns are: ", paste(names(wealth), collapse = ", "))
+}
+
+wealth_boro <- wealth |>
+  mutate(
+    borough = stringr::str_trim(borough),
+    income_val = suppressWarnings(as.numeric(.data[[have_income[1]]]))
+  ) |>
+  filter(!is.na(borough), !is.na(income_val)) |>
+  group_by(borough) |>
+  summarise(median_income = median(income_val, na.rm = TRUE), .groups = "drop")
+
+compare_big <- per_capita |>
+  select(borough, total_energy, total_students, energy_per_student) |>
+  inner_join(wealth_boro, by = "borough") |>
+  drop_na(total_energy, total_students, median_income) |>
+  mutate(size_pts = scales::rescale(total_students, to = c(4, 12)))
+
+if (!exists("pal")) {
+  pal <- setNames(
+    viridis(5, option = "D"),
+    c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+  )
+}
+
+ggplot(compare_big, aes(median_income, total_energy, color = borough)) +
+  geom_point(aes(size = size_pts)) +
+  geom_text(aes(label = borough), vjust = -1, size = 4, show.legend = FALSE) +
+  scale_size_identity() +
+  scale_color_manual(values = pal) +
+  scale_y_continuous(labels = label_comma(), expand = expansion(mult = c(0.1, 0.2))) +
+  scale_x_continuous(labels = label_comma(), expand = expansion(mult = c(0.1, 0.2))) +
+  labs(
+    title = "How Borough Wealth Relates to Total School Energy Use",
+    x = "Median household income (USD)",
+    y = "Total school energy usage (mmBTUs)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
 ```
 
 

@@ -101,7 +101,6 @@ These data cleaning sections are optional and depend on if you have some data cl
 
 ### Plot 2: _________
 ```{r message=FALSE}
-# Total energy usage per borough
 
 library(tidyverse)
 library(viridis)
@@ -165,7 +164,50 @@ ggplot(borough_totals) +
 
 ### Plot 3: ___________
 
-Add more plot sections as needed. Each project should have at least 3 plots, but talk to me if you have fewer than 3.
+```{r}
+
+library(tidyverse)
+library(viridis)
+library(scales)
+
+wealth_boro <- df |>
+  mutate(borough = str_trim(Borough),
+         Median_Income = suppressWarnings(as.numeric(Median_Income))) |>
+  filter(!is.na(borough), !is.na(Median_Income)) |>
+  group_by(borough) |>
+  summarise(median_income = median(Median_Income, na.rm = TRUE), .groups = "drop")
+
+compare_big <- per_capita |>
+  select(borough, total_energy, total_students, energy_per_student) |>
+  inner_join(wealth_boro, by = "borough") |>
+  drop_na(total_energy, total_students, median_income) |>
+  mutate(size_pts = scales::rescale(total_students, to = c(4, 12)))
+
+if (!exists("pal")) {
+  pal <- setNames(
+    viridis(5, option = "D"),
+    c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+  )
+}
+
+ggplot(compare_big, aes(median_income, total_energy, color = borough)) +
+  geom_point(aes(size = size_pts)) +
+  geom_text(aes(label = borough), vjust = -1, size = 4, show.legend = FALSE) +
+  scale_size_identity() +
+  scale_color_manual(values = pal) +
+  scale_y_continuous(labels = label_comma()) +
+  scale_x_continuous(labels = label_comma()) +
+  labs(
+    title = "How Borough Wealth Relates to Total School Energy Use",
+    x = "Median household income (USD)",
+    y = "Total school energy usage (mmBTUs)",
+    subtitle = "Point size rescaled to avoid one borough dominating"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
 
 ### Plot 4: ___________ 
 
