@@ -51,30 +51,6 @@ skim(enrollment)
 
 ## Plots
 
-### ggsave example for saving plots
-
-```{r starwars ggsave example}
-p1 <- starwars |>
-  filter(mass < 1000, 
-         species %in% c("Human", "Cerean", "Pau'an", "Droid", "Gungan")) |>
-  ggplot() +
-  geom_point(aes(x = mass, 
-                 y = height, 
-                 color = species)) +
-  labs(x = "Weight (kg)", 
-       y = "Height (m)",
-       color = "Species",
-       title = "Weight and Height of Select Starwars Species",
-       caption = paste("This data comes from the starwars api: https://swapi.py43.com"))
-
-
-ggsave("example-starwars.png", width = 4, height = 4)
-
-ggsave("example-starwars-wide.png", width = 6, height = 4)
-```
-
-
-
 ### Plot 1: Total Usage by Borough 
 
 #### Data cleanup steps specific to plot 1
@@ -307,3 +283,120 @@ ggplot(energy_box_numeric, aes(
   theme_minimal()
 
 ```
+### Final Plot 4
+```{r}
+wealth_source <- if (exists("df")) {
+  df
+} else {
+  wealth_file <- list.files("../data", pattern = "(?i)Neighborhood_Financial_Health.*\\.csv$", full.names = TRUE)
+  readr::read_csv(wealth_file[1], show_col_types = FALSE)
+}
+
+bcols <- names(wealth_source)
+borough_col <- bcols[grepl("^borough$", bcols, ignore.case = TRUE) | grepl("^boro(ugh)?s?$", bcols, ignore.case = TRUE)]
+if (length(borough_col) == 0) stop("Could not find a 'Borough' column. Columns are: ", paste(bcols, collapse = ", "))
+
+income_candidates <- c("Median_Income","Median_Household_Income","Income","median_income","median_household_income","income")
+income_col <- bcols[match(tolower(income_candidates), tolower(bcols), nomatch = 0)]
+if (length(income_col) == 0) stop("Could not find an income column. Looked for: ", paste(income_candidates, collapse = ", "),
+                                  ". Columns are: ", paste(bcols, collapse = ", "))
+income_col <- income_col[1]
+
+wealth_boro <- wealth_source |>
+  mutate(
+    borough_std = stringr::str_trim(.data[[borough_col[1]]]),
+    income_val  = suppressWarnings(as.numeric(.data[[income_col]]))
+  ) |>
+  filter(!is.na(borough_std), !is.na(income_val)) |>
+  group_by(borough_std) |>
+  summarise(median_income = median(income_val, na.rm = TRUE), .groups = "drop") |>
+  rename(borough = borough_std)
+
+pal <- if (exists("pal")) pal else setNames(
+  viridis(5, option = "D"),
+  c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+)
+
+p4 <- ggplot(wealth_boro) +
+  geom_col(aes(x = fct_reorder(borough, median_income), y = median_income, fill = borough)) +
+  scale_fill_manual(values = pal) +
+  labs(
+    title = "Wealth Per Capita (Proxy) by Borough",
+    subtitle = "Proxy = Median household income",
+    x = "Borough",
+    y = "Median household income (USD)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p4
+```
+
+```{r plots-PNG}
+p1 <- ggplot(borough_totals) +
+  geom_col(aes(
+    x = borough_name,
+    y = total_energy_borough,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = paste0(energy_type, " by Borough"),
+    x = "Borough",
+    y = energy_type
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p1
+ggsave("plot1-total-usage-by-borough.png", p1, width = 6, height = 4, dpi = 300)
+
+p2 <- ggplot(per_capita) +
+  geom_col(aes(
+    x = fct_reorder(borough_name, energy_per_student),
+    y = energy_per_student,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D") +
+  labs(
+    title = "Energy Per Student by Borough",
+    x = "Borough",
+    y = "mmBTUs per student"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p2
+ggsave("plot2-energy-per-student.png", p2, width = 6, height = 4, dpi = 300)
+
+p3 <- ggplot(energy_box_numeric, aes(
+  x = borough,
+  y = avg_monthly_usage
+)) +
+  geom_boxplot(fill = "darkorange", alpha = 0.7) +
+  labs(
+    title = "Distribution of Average Monthly Energy Usage by Borough",
+    x = "Borough",
+    y = "Average Monthly Usage (MMBtu)"
+  ) +
+  theme_minimal()
+
+p3
+ggsave("plot3-monthly-usage-boxplot.png", p3, width = 6, height = 4, dpi = 300)
+
+p4 <- ggplot(wealth_boro) +
+  geom_col(aes(x = fct_reorder(borough, median_income), y = median_income, fill = borough)) +
+  scale_fill_manual(values = pal) +
+  labs(
+    title = "Wealth Per Capita (Proxy) by Borough",
+    subtitle = "Proxy = Median household income",
+    x = "Borough",
+    y = "Median household income (USD)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+p4
+ggsave("plot4-wealth-per-capita-by-borough.png", p4, width = 6, height = 4, dpi = 300)
+```
+
