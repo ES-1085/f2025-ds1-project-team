@@ -48,104 +48,6 @@ glimpse(enrollment)
 skim(enrollment)
 ```
 
-### Step 10: Import and Filter Enrollment Dataset
-```{r import-enrollment}
-demo <- readxl::read_excel(
-  "../data/enrollment-public-district-2024-25-all-students.xlsx",
-  sheet = "public-district-2024-25"
-)
-
-```
-
-### Step 11: Standardize Borough Names and Parse Enrollment
-
-```{r parse-enrollment}
-nyc_dists <- demo |>
-  filter(
-    County %in% c("BRONX", "KINGS", "NEW YORK", "QUEENS", "RICHMOND"),
-    `Subgroup Name` == "All Students"
-  ) |>
-  mutate(
-    borough = case_when(
-      County == "NEW YORK" ~ "Manhattan",
-      County == "BRONX" ~ "Bronx",
-      County == "KINGS" ~ "Brooklyn",
-      County == "QUEENS" ~ "Queens",
-      County == "RICHMOND" ~ "Staten Island"
-    ),
-    `PreK-12 Total` = readr::parse_number(`PreK-12 Total`)
-  ) |>
-  select(borough, `PreK-12 Total`)
-
-```
-
-### Step 12: Aggregate Enrollment Totals by Borough
-```{r aggregate-enrollment}
-enroll_borough <- nyc_dists |>
-  group_by(borough) |>
-  summarise(total_students = sum(`PreK-12 Total`, na.rm = TRUE))
-
-```
-
-### Step 13: Aggregate Energy by Borough 
-```{r aggregate-energy}
-energy_borough <- energy_numeric |>
-  group_by(borough_name) |>
-  summarise(total_energy = sum(total_energy, na.rm = TRUE))
-
-```
-
-### Step 14: Compute Energy per Student
-```{r energy-per-student}
-per_capita <- energy_borough |>
-  inner_join(enroll_borough, by = c("borough_name" = "borough")) |>
-  mutate(energy_per_student = total_energy / total_students)
-```
-
-### Step 15: Filter Rows for Total Energy Usage
-```{r filter-rows}
-energy_box <- energy |>
-  filter(grepl("Total Usage", measurement, ignore.case = TRUE))
-
-```
-
-### Step 16: Convert Monthly Columns to Numeric
-```{r monthly-to-numeric}
-energy_box_numeric <- energy_box |>
-  mutate(across(
-    starts_with(c("aug","sep","oct","nov","dec","jan","feb","mar","apr","may","jun")),
-    ~ suppressWarnings(as.numeric(.))
-  ))
-
-```
-
-### Step 17: Get Average Monthly Usage
-```{r monthly-average-usage}
-energy_box_numeric <- energy_box_numeric |>
-  rowwise() |>
-  mutate(
-    avg_monthly_usage = mean(
-      c_across(starts_with(c("aug","sep","oct","nov","dec","jan","feb","mar","apr","may","jun"))),
-      na.rm = TRUE
-    )
-  ) |>
-  ungroup()
-
-```
-
-### Step 18: Compute Borough Medians
-```{r medians}
-wealth_boro <- wealth |>
-  mutate(
-    Borough = stringr::str_trim(Borough),
-    Median_Income = suppressWarnings(as.numeric(Median_Income))
-  ) |>
-  filter(!is.na(Borough), !is.na(Median_Income)) |>
-  group_by(Borough) |>
-  summarise(median_income = median(Median_Income, na.rm = TRUE))
-
-```
-
 
 ## Plots
 
@@ -271,139 +173,140 @@ ggplot(borough_totals) +
 ```
 
 
-### Plot 2: _________
-```{r message=FALSE}
-
-library(tidyverse)
-library(viridis)
-
-energy <- as_tibble(data)
-
-energy_type <- "Total Usage (mmBTUs)"
-
-energy_filtered <- energy |>
-  filter(measurement == energy_type)
-
-usage_cols <- energy_filtered |>
-  select(
-    -building_address,
-    -borough,
-    -measurement,
-    -postcode,
-    -latitude,
-    -longitude,
-    -community_board,
-    -council_district,
-    -census_tract,
-    -bin,
-    -bbl,
-    -nta
-  ) |>
-  colnames()
-
-energy_numeric <- energy_filtered |>
-  mutate(across(all_of(usage_cols), ~ suppressWarnings(as.numeric(.)))) |>
-  mutate(total_energy = rowSums(across(all_of(usage_cols)), na.rm = TRUE)) |>
-  mutate(
-    borough_name = factor(
-      borough,
-      levels = c("1","2","3","4","5"),
-      labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
-    )
-  )
-
-borough_totals <- energy_numeric |>
-  group_by(borough_name) |>
-  summarise(
-    total_energy_borough = sum(total_energy, na.rm = TRUE)
-  )
-
-ggplot(borough_totals) +
-  geom_col(aes(
-    x = borough_name,
-    y = total_energy_borough,
-    fill = borough_name
-  )) +
-  scale_fill_viridis_d(option = "D", name = "Borough Name") + 
-  labs(
-    title = paste0(energy_type, " by Borough"),
-    x = "Borough",
-    y = energy_type
-  ) +
-  theme_minimal() + theme(legend.position = "none")
+### Plot 2: Per Student Plot
+### Step 1: Import and Filter Enrollment Dataset
+```{r import-enrollment}
+demo <- readxl::read_excel(
+  "../data/enrollment-public-district-2024-25-all-students.xlsx",
+  sheet = "public-district-2024-25"
+)
 
 ```
 
-### Plot 3: ___________
+### Step 2: Standardize Borough Names and Parse Enrollment
 
-```{r}
-
-library(tidyverse)
-library(viridis)
-library(scales)
-
-wealth_file <- list.files("../data",
-                          pattern = "(?i)Neighborhood_Financial_Health.*\\.csv$",
-                          full.names = TRUE)
-stopifnot(length(wealth_file) >= 1)
-
-wealth_raw <- readr::read_csv(wealth_file[1], show_col_types = FALSE)
-
-wealth <- wealth_raw |>
-  rename_with(~ gsub("[^A-Za-z0-9]+", "_", .x)) |>
-  rename_with(~ tolower(.x))
-
-if (!"borough" %in% names(wealth)) {
-  stop("No 'borough' column in the wealth CSV. Columns are: ",
-       paste(names(wealth), collapse = ", "))
-}
-
-income_col <- c("median_income", "median_household_income", "income", "medianincome")
-have_income <- income_col[income_col %in% names(wealth)]
-if (length(have_income) == 0) {
-  stop("No income column found. Looked for: ",
-       paste(income_col, collapse = ", "), 
-       ". Columns are: ", paste(names(wealth), collapse = ", "))
-}
-
-wealth_boro <- wealth |>
-  mutate(
-    borough = stringr::str_trim(borough),
-    income_val = suppressWarnings(as.numeric(.data[[have_income[1]]]))
+```{r parse-enrollment}
+nyc_dists <- demo |>
+  filter(
+    County %in% c("BRONX", "KINGS", "NEW YORK", "QUEENS", "RICHMOND"),
+    `Subgroup Name` == "All Students"
   ) |>
-  filter(!is.na(borough), !is.na(income_val)) |>
+  mutate(
+    borough = case_when(
+      County == "NEW YORK" ~ "Manhattan",
+      County == "BRONX" ~ "Bronx",
+      County == "KINGS" ~ "Brooklyn",
+      County == "QUEENS" ~ "Queens",
+      County == "RICHMOND" ~ "Staten Island"
+    ),
+    `PreK-12 Total` = readr::parse_number(`PreK-12 Total`)
+  ) |>
+  select(borough, `PreK-12 Total`)
+
+```
+
+### Step 3: Aggregate Enrollment Totals by Borough
+```{r aggregate-enrollment}
+enroll_borough <- nyc_dists |>
   group_by(borough) |>
-  summarise(median_income = median(income_val, na.rm = TRUE), .groups = "drop")
+  summarise(total_students = sum(`PreK-12 Total`, na.rm = TRUE))
 
-compare_big <- per_capita |>
-  select(borough, total_energy, total_students, energy_per_student) |>
-  inner_join(wealth_boro, by = "borough") |>
-  drop_na(total_energy, total_students, median_income) |>
-  mutate(size_pts = scales::rescale(total_students, to = c(4, 12)))
+```
 
-if (!exists("pal")) {
-  pal <- setNames(
-    viridis(5, option = "D"),
-    c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
-  )
-}
+### Step 4: Aggregate Energy by Borough 
+```{r aggregate-energy}
+energy_borough <- energy_numeric |>
+  group_by(borough_name) |>
+  summarise(total_energy = sum(total_energy, na.rm = TRUE))
 
-ggplot(compare_big, aes(median_income, total_energy, color = borough)) +
-  geom_point(aes(size = size_pts)) +
-  geom_text(aes(label = borough), vjust = -1, size = 4, show.legend = FALSE) +
-  scale_size_identity() +
-  scale_color_manual(values = pal) +
-  scale_y_continuous(labels = label_comma(), expand = expansion(mult = c(0.1, 0.2))) +
-  scale_x_continuous(labels = label_comma(), expand = expansion(mult = c(0.1, 0.2))) +
+```
+
+### Step 5: Compute Energy per Student
+```{r energy-per-student}
+per_capita <- energy_borough |>
+  inner_join(enroll_borough, by = c("borough_name" = "borough")) |>
+  mutate(energy_per_student = total_energy / total_students)
+```
+
+#### Final Plot 2
+```{r plot-2}
+ggplot(per_capita) +
+  geom_col(aes(
+    x = fct_reorder(borough_name, energy_per_student),
+    y = energy_per_student,
+    fill = borough_name
+  )) +
+  scale_fill_viridis_d(option = "D") +
   labs(
-    title = "How Borough Wealth Relates to Total School Energy Use",
-    x = "Median household income (USD)",
-    y = "Total school energy usage (mmBTUs)"
+    title = "Energy Per Student by Borough",
+    x = "Borough",
+    y = "mmBTUs per student"
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
 ```
 
+### Plot 3: Boxplot
+
+### Step 1: Filter Rows for Total Energy Usage
+```{r filter-rows}
+energy_box <- energy |>
+  filter(grepl("Total Usage", measurement, ignore.case = TRUE))
+
+```
+
+### Step 2: Convert Monthly Columns to Numeric
+```{r monthly-to-numeric}
+energy_box_numeric <- energy_box |>
+  mutate(across(
+    starts_with(c("aug","sep","oct","nov","dec","jan","feb","mar","apr","may","jun")),
+    ~ suppressWarnings(as.numeric(.))
+  ))
+
+```
+
+### Step 3: Get Average Monthly Usage
+```{r monthly-average-usage}
+energy_box_numeric <- energy_box_numeric |>
+  rowwise() |>
+  mutate(
+    avg_monthly_usage = mean(
+      c_across(starts_with(c("aug","sep","oct","nov","dec","jan","feb","mar","apr","may","jun"))),
+      na.rm = TRUE
+    )
+  ) |>
+  ungroup()
+
+```
+
+### Step 4: Compute Borough Medians
+```{r medians}
+wealth_boro <- wealth |>
+  mutate(
+    Borough = stringr::str_trim(Borough),
+    Median_Income = suppressWarnings(as.numeric(Median_Income))
+  ) |>
+  filter(!is.na(Borough), !is.na(Median_Income)) |>
+  group_by(Borough) |>
+  summarise(median_income = median(Median_Income, na.rm = TRUE))
+
+```
+#### Final Plot 3
+```{r plot-3}
+ggplot(energy_box_numeric, aes(
+  x = borough,
+  y = avg_monthly_usage
+)) +
+  geom_boxplot(fill = "darkorange", alpha = 0.7) +
+  labs(
+    title = "Distribution of Average Monthly Energy Usage by Borough",
+    x = "Borough",
+    y = "Average Monthly Usage (MMBtu)"
+  ) +
+  theme_minimal()
+
+```
 
 ### Plot 4: ___________ 
 
