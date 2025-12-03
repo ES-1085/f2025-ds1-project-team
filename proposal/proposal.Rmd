@@ -262,10 +262,18 @@ ggsave(
 library(tidyverse)
 library(viridis)
 
-# Clean Borough and ensure income is numeric
-wealth_boro <- df |>
+library(tidyverse)
+
+wealth_file <- list.files("../data",
+                          pattern = "(?i)Neighborhood_Financial_Health.*\\.csv$",
+                          full.names = TRUE)
+stopifnot(length(wealth_file) >= 1)
+
+wealth_raw <- readr::read_csv(wealth_file[1], show_col_types = FALSE)
+
+wealth_boro <- wealth_raw |>
   mutate(
-    Borough = str_trim(Borough),
+    Borough = stringr::str_trim(Borough),
     Median_Income = suppressWarnings(as.numeric(Median_Income))
   ) |>
   filter(!is.na(Borough), !is.na(Median_Income)) |>
