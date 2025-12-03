@@ -146,7 +146,7 @@ library(viridis)
 
 energy <- as_tibble(data)
 
-demo <- read_excel("../data/enrollment-public-district-2024-25-all-students.xlsx",
+demo <- read_csv("../data/Enrollment.csv",
                    sheet = "public-district-2024-25")
 
 nyc_dists <- demo |>
