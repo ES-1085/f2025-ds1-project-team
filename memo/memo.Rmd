@@ -63,8 +63,6 @@ skim(enrollment)
 
 ### Plot 1: Total Usage by Borough
 
-#### Data cleanup steps specific to plot 1
-
 ### Step 1: Convert Raw Dataset
 
 ```{r dataset-to-tibble}
@@ -144,7 +142,7 @@ borough_totals <- energy_numeric |>
 
 ### Final Plot 1
 
-```{r plot-1}
+```{r plot-1, fig.alt="A bar chart showing total energy usage by Borough. Manhattan has the highest value and Staten Island has the lowest."}
 ggplot(borough_totals) +
   geom_col(aes(
     x = borough_name,
@@ -224,7 +222,7 @@ per_capita <- energy_borough |>
 
 ### Final Plot 2
 
-```{r plot-2}
+```{r plot-2, fig.alt="A bar chart showing energy usage per student by borough. Manhattan has the highest value and Queens has the lowest."}
 ggplot(per_capita) +
   geom_col(aes(
     x = fct_reorder(borough_name, energy_per_student),
@@ -235,7 +233,7 @@ ggplot(per_capita) +
   labs(
     title = "Energy Per Student by Borough",
     x = "Borough",
-    y = "mmBTUs per student"
+    y = "mmBTUs per student",
   ) +
   theme_minimal() +
   theme(legend.position = "none")
@@ -293,8 +291,7 @@ wealth_boro <- wealth |>
 ```
 
 ### Final Plot 3
-
-```{r plot-3}
+```{r plot-3, fig.alt="A box plot showing energy usage by borough."}
 ggplot(energy_box_numeric, aes(
   x = borough,
   y = avg_monthly_usage
@@ -309,47 +306,77 @@ ggplot(energy_box_numeric, aes(
 
 ```
 
-### Final Plot 4
+## Plot 4
 
-```{r}
-wealth_source <- if (exists("df")) {
-  df
-} else {
-  wealth_file <- list.files("../data", pattern = "(?i)Neighborhood_Financial_Health.*\\.csv$", full.names = TRUE)
-  readr::read_csv(wealth_file[1], show_col_types = FALSE)
-}
+### Step 1: Load Wealth Dataset
 
-bcols <- names(wealth_source)
-borough_col <- bcols[grepl("^borough$", bcols, ignore.case = TRUE) | grepl("^boro(ugh)?s?$", bcols, ignore.case = TRUE)]
-if (length(borough_col) == 0) stop("Could not find a 'Borough' column. Columns are: ", paste(bcols, collapse = ", "))
+```{r load-wealth-dataset}
+wealth_source <- wealth 
+```
 
-income_candidates <- c("Median_Income","Median_Household_Income","Income","median_income","median_household_income","income")
-income_col <- bcols[match(tolower(income_candidates), tolower(bcols), nomatch = 0)]
-if (length(income_col) == 0) stop("Could not find an income column. Looked for: ", paste(income_candidates, collapse = ", "),
-                                  ". Columns are: ", paste(bcols, collapse = ", "))
-income_col <- income_col[1]
+### Step 2: Clean Borough Names
 
+```{r clean-boroughs}
 wealth_boro <- wealth_source |>
   mutate(
-    borough_std = stringr::str_trim(.data[[borough_col[1]]]),
-    income_val  = suppressWarnings(as.numeric(.data[[income_col]]))
+    borough_std = stringr::str_trim(Borough),
+    borough_std = case_when(
+      str_detect(borough_std, "(?i)man")     ~ "Manhattan",
+      str_detect(borough_std, "(?i)bronx")   ~ "Bronx",
+      str_detect(borough_std, "(?i)brook")   ~ "Brooklyn",
+      str_detect(borough_std, "(?i)queen")   ~ "Queens",
+      str_detect(borough_std, "(?i)richmond|staten") ~ "Staten Island",
+      TRUE ~ borough_std
+    )
+  )
+
+```
+
+### Step 3: Convert Income to Numeric
+
+```{r convert-to-numeric}
+wealth_boro <- wealth_boro |>
+  mutate(
+    income_val = suppressWarnings(as.numeric(Median_Income))
   ) |>
-  filter(!is.na(borough_std), !is.na(income_val)) |>
+  filter(!is.na(borough_std), !is.na(income_val))
+```
+
+### Step 4: Aggregate Median Income
+
+```{r aggregate}
+wealth_boro <- wealth_boro |>
   group_by(borough_std) |>
-  summarise(median_income = median(income_val, na.rm = TRUE), .groups = "drop") |>
+  summarise(
+    median_income = median(income_val, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
   rename(borough = borough_std)
+```
 
-pal <- if (exists("pal")) pal else setNames(
-  viridis(5, option = "D"),
-  c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
-)
+### Step 5: Color Palette
+```{r colors}
+if (!exists("pal")) {
+  pal <- setNames(
+    viridis::viridis(5, option = "D"),
+    c("Manhattan", "Bronx", "Brooklyn", "Queens", "Staten Island")
+  )
+}
+```
 
+### Final Plot 4
+
+```{r plot-4, fig.alt="A bar chart showing wealth per capita by borough. The highest value is Manhattan and the lowest is the Bronx."}
 p4 <- ggplot(wealth_boro) +
-  geom_col(aes(x = fct_reorder(borough, median_income), y = median_income, fill = borough)) +
+  geom_col(aes(
+    x = forcats::fct_reorder(borough, median_income),
+    y = median_income,
+    fill = borough
+  )) +
   scale_fill_manual(values = pal) +
   labs(
     title = "Wealth Per Capita (Proxy) by Borough",
-    subtitle = "Proxy = Median household income",
+    subtitle = "Proxy = Median Household Income",
     x = "Borough",
     y = "Median household income (USD)"
   ) +
@@ -359,77 +386,11 @@ p4 <- ggplot(wealth_boro) +
 p4
 ```
 
-```{r plots-PNG}
-p1 <- ggplot(borough_totals) +
-  geom_col(aes(
-    x = borough_name,
-    y = total_energy_borough,
-    fill = borough_name
-  )) +
-  scale_fill_viridis_d(option = "D") +
-  labs(
-    title = paste0(energy_type, " by Borough"),
-    x = "Borough",
-    y = energy_type
-  ) +
-  theme_minimal() +
-  theme(legend.position = "none")
-
-p1
-ggsave("plot1-total-usage-by-borough.png", p1, width = 6, height = 4, dpi = 300)
-
-p2 <- ggplot(per_capita) +
-  geom_col(aes(
-    x = fct_reorder(borough_name, energy_per_student),
-    y = energy_per_student,
-    fill = borough_name
-  )) +
-  scale_fill_viridis_d(option = "D") +
-  labs(
-    title = "Energy Per Student by Borough",
-    x = "Borough",
-    y = "mmBTUs per student"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "none")
-
-p2
-ggsave("plot2-energy-per-student.png", p2, width = 6, height = 4, dpi = 300)
-
-p3 <- ggplot(energy_box_numeric, aes(
-  x = borough,
-  y = avg_monthly_usage
-)) +
-  geom_boxplot(fill = "darkorange", alpha = 0.7) +
-  labs(
-    title = "Distribution of Average Monthly Energy Usage by Borough",
-    x = "Borough",
-    y = "Average Monthly Usage (MMBtu)"
-  ) +
-  theme_minimal()
-
-p3
-ggsave("plot3-monthly-usage-boxplot.png", p3, width = 6, height = 4, dpi = 300)
-
-p4 <- ggplot(wealth_boro) +
-  geom_col(aes(x = fct_reorder(borough, median_income), y = median_income, fill = borough)) +
-  scale_fill_manual(values = pal) +
-  labs(
-    title = "Wealth Per Capita (Proxy) by Borough",
-    subtitle = "Proxy = Median household income",
-    x = "Borough",
-    y = "Median household income (USD)"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "none")
-
-p4
-ggsave("plot4-wealth-per-capita-by-borough.png", p4, width = 6, height = 4, dpi = 300)
-```
 
 ###Final Plot 5
 
 ### Step 1: Define Conversion Units
+
 ```{r create-units}
 # Energy → MMBtu
 kwh_to_mmbtu      <- 0.003412
@@ -448,6 +409,7 @@ kg_per_kwh_grid    <- 0.25
 ```
 
 ### Step 2: Identify Numeric Usage Columns
+
 ```{r id-columns}
 usage_cols_all <- energy |>
   select(-building_address, -borough, -measurement, -postcode, -latitude,
@@ -458,6 +420,7 @@ usage_cols_all <- energy |>
 ```
 
 ### Step 3: Convert to Numeric
+
 ```{r to-numeric}
 carbon_ready <- energy |>
   mutate(
@@ -468,6 +431,7 @@ carbon_ready <- energy |>
 ```
 
 ### Step 4: Classify Fuel Types
+
 ```{r fuel-types}
 carbon_ready <- carbon_ready |>
   mutate(
@@ -492,6 +456,7 @@ carbon_ready <- carbon_ready |>
 ```
 
 ### Step 5: Convert Fuel Types to kg CO2
+
 ```{r convert-fuel-types}
 carbon_by_row <- carbon_ready |>
   mutate(
@@ -535,6 +500,7 @@ carbon_borough <- carbon_by_row |>
 ```
 
 ### Step 7: Set Color Palette
+
 ```{r colors}
 if (!exists("pal")) {
   pal <- setNames(
@@ -545,7 +511,8 @@ if (!exists("pal")) {
 ```
 
 ### Final Plot 5
-```{r plot-5}
+
+```{r plot-5, fig.alt="A bar chart showing carbon emissions by Borough. Manhattan has the highest and Staten island has the lowest."}
 p5 <- ggplot(carbon_borough) +
   geom_col(aes(
     x = fct_reorder(borough_name, t_co2),
@@ -564,4 +531,3 @@ p5 <- ggplot(carbon_borough) +
 p5
 
 ```
-
