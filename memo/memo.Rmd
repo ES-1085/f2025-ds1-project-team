@@ -142,7 +142,7 @@ borough_totals <- energy_numeric |>
 
 ### Final Plot 1
 
-```{r plot-1, fig.alt="A bar chart showing total energy usage by Borough. Manhattan has the highest value and Staten Island has the lowest."}
+```{r plot-1, fig.alt = “Vertical bar chart showing total annual energy usage (in mmBTUs) for five NYC boroughs: Manhattan, Bronx, Brooklyn, Queens, and Staten Island. Manhattan has the highest total usage, followed by the Bronx and Brooklyn, while Queens and Staten Island are much lower.”}
 ggplot(borough_totals) +
   geom_col(aes(
     x = borough_name,
@@ -222,7 +222,7 @@ per_capita <- energy_borough |>
 
 ### Final Plot 2
 
-```{r plot-2, fig.alt="A bar chart showing energy usage per student by borough. Manhattan has the highest value and Queens has the lowest."}
+```{r plot-2, fig.alt = “Vertical bar chart showing energy usage per student (in mmBTUs) across Manhattan, Staten Island, Bronx, Brooklyn, and Queens. Manhattan and Staten Island have the highest per-student usage, the Bronx and Brooklyn fall in the middle, and Queens has the lowest.”}
 ggplot(per_capita) +
   geom_col(aes(
     x = fct_reorder(borough_name, energy_per_student),
@@ -298,7 +298,7 @@ energy_box_numeric <- energy_box_numeric |>
 ```
 
 ### Final Plot 3
-```{r plot-3, fig.alt="A box plot showing energy usage by borough."}
+```{r plot-3, fig.alt = “Box plot comparing average monthly energy usage (in mmBTUs) for schools in Manhattan, Bronx, Brooklyn, Queens, and Staten Island. Manhattan and the Bronx show the greatest spread and highest values, indicating variability in building performance, while Brooklyn and Queens have tighter, more consistent distributions.”}
 ggplot(energy_box_numeric, aes(
   x = borough,
   y = avg_monthly_usage
@@ -372,7 +372,7 @@ if (!exists("pal")) {
 
 ### Final Plot 4
 
-```{r plot-4, fig.alt="A bar chart showing wealth per capita by borough. The highest value is Manhattan and the lowest is the Bronx."}
+```{r plot-4, fig.alt = “Vertical bar chart displaying median household income for Manhattan, Staten Island, Brooklyn, Queens, and the Bronx. Manhattan has the highest income by a wide margin, Staten Island is next, Brooklyn and Queens fall in the middle, and the Bronx is lowest.”}
 p4 <- ggplot(wealth_boro) +
   geom_col(aes(
     x = forcats::fct_reorder(borough, median_income),
@@ -518,7 +518,7 @@ if (!exists("pal")) {
 
 ### Final Plot 5
 
-```{r plot-5, fig.alt="A bar chart showing carbon emissions by Borough. Manhattan has the highest and Staten island has the lowest."}
+```{r plot-5, fig.alt = “Vertical bar chart showing estimated annual carbon emissions (in metric tons of CO₂) from school buildings across Manhattan, Bronx, Brooklyn, Queens, and Staten Island. Manhattan has the highest total emissions, followed by the Bronx and Brooklyn, while Queens and Staten Island have the lowest.”}
 p5 <- ggplot(carbon_borough) +
   geom_col(aes(
     x = fct_reorder(borough_name, t_co2),
