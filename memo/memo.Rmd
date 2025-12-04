@@ -279,15 +279,22 @@ energy_box_numeric <- energy_box_numeric |>
 ### Step 4: Compute Borough Medians
 
 ```{r medians}
-wealth_boro <- wealth |>
+energy_box_numeric <- energy_box_numeric |>
   mutate(
-    Borough = stringr::str_trim(Borough),
-    Median_Income = suppressWarnings(as.numeric(Median_Income))
+    borough = factor(
+      borough,
+      levels = c("1","2","3","4","5"),
+      labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+    )
   ) |>
-  filter(!is.na(Borough), !is.na(Median_Income)) |>
-  group_by(Borough) |>
-  summarise(median_income = median(Median_Income, na.rm = TRUE))
-
+  rowwise() |>
+  mutate(
+    avg_monthly_usage = mean(
+      c_across(starts_with(c("aug","sep","oct","nov","dec","jan","feb","mar","apr","may","jun"))),
+      na.rm = TRUE
+    )
+  ) |>
+  ungroup()
 ```
 
 ### Final Plot 3
@@ -303,7 +310,6 @@ ggplot(energy_box_numeric, aes(
     y = "Average Monthly Usage (MMBtu)"
   ) +
   theme_minimal()
-
 ```
 
 ## Plot 4
