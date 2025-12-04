@@ -2,19 +2,22 @@
 title: "Project memo"
 author: "Jack, Margaret, Ben"
 output: github_document
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
 
-Design choices: 
-Standardized coloring for burrows to enhance readability between graphs
-Virdits colorblind safe for our palette 
-Legends removed to increase plot size & reduce clutter because categories are already on axis
-Per student normalization to control for enrollment differences 
-Borough mapping via county to increase readability / familiairity
-Alt text to encourage accessibility  
+Design choices: Standardized coloring for burrows to enhance readability
+between graphs Virdits colorblind safe for our palette Legends removed
+to increase plot size & reduce clutter because categories are already on
+axis Per student normalization to control for enrollment differences
+Borough mapping via county to increase readability / familiairity Alt
+text to encourage accessibility
 
 ## Data Clean Up Steps for Overall Data
 
 ### Step 1: Import Packages
+
 ```{r load-packages}
 library(tidyverse)
 library(broom)
@@ -23,6 +26,7 @@ library(jsonlite)
 ```
 
 ### Step 2: Import Datasets
+
 ```{r Main Dataset}
 library(jsonlite)
 library(dplyr)
@@ -34,6 +38,7 @@ glimpse(data)
 skim(data)
 
 ```
+
 ```{r Finance Dataset}
 library(readr)
 library(dplyr)
@@ -43,6 +48,7 @@ wealth <- read_csv("../data/Neighborhood_Financial_Health_Digital_Mapping_and_Da
 glimpse(wealth)
 skim(wealth)
 ```
+
 ```{r Enrollment Dataset}
 library(readr)
 library(dplyr)
@@ -53,14 +59,14 @@ glimpse(enrollment)
 skim(enrollment)
 ```
 
-
 ## Plots
 
-### Plot 1: Total Usage by Borough 
+### Plot 1: Total Usage by Borough
 
 #### Data cleanup steps specific to plot 1
 
 ### Step 1: Convert Raw Dataset
+
 ```{r dataset-to-tibble}
 energy <- as_tibble(data)
 ```
@@ -76,6 +82,7 @@ energy_filtered <- energy |>
 ```
 
 ### Step 3: Select Columns in Energy Dataset
+
 ```{r select-energy}
 usage_cols <- energy_filtered |>
   select(
@@ -113,6 +120,7 @@ energy_numeric <- energy_numeric |>
 ```
 
 ### Step 6: Borough Numbers to Names
+
 ```{r Borough-to-names}
 energy_numeric <- energy_numeric |>
   mutate(
@@ -126,6 +134,7 @@ energy_numeric <- energy_numeric |>
 ```
 
 ### Step 7: Aggregate by Borough
+
 ```{r aggregate-by-borough}
 borough_totals <- energy_numeric |>
   group_by(borough_name) |>
@@ -133,7 +142,7 @@ borough_totals <- energy_numeric |>
 
 ```
 
-#### Final Plot 1
+### Final Plot 1
 
 ```{r plot-1}
 ggplot(borough_totals) +
@@ -153,9 +162,10 @@ ggplot(borough_totals) +
 
 ```
 
+## Plot 2: Per Student Plot
 
-### Plot 2: Per Student Plot
 ### Step 1: Import and Filter Enrollment Dataset
+
 ```{r import-enrollment}
 demo <- readxl::read_excel(
   "../data/enrollment-public-district-2024-25-all-students.xlsx",
@@ -187,6 +197,7 @@ nyc_dists <- demo |>
 ```
 
 ### Step 3: Aggregate Enrollment Totals by Borough
+
 ```{r aggregate-enrollment}
 enroll_borough <- nyc_dists |>
   group_by(borough) |>
@@ -194,7 +205,8 @@ enroll_borough <- nyc_dists |>
 
 ```
 
-### Step 4: Aggregate Energy by Borough 
+### Step 4: Aggregate Energy by Borough
+
 ```{r aggregate-energy}
 energy_borough <- energy_numeric |>
   group_by(borough_name) |>
@@ -203,13 +215,15 @@ energy_borough <- energy_numeric |>
 ```
 
 ### Step 5: Compute Energy per Student
+
 ```{r energy-per-student}
 per_capita <- energy_borough |>
   inner_join(enroll_borough, by = c("borough_name" = "borough")) |>
   mutate(energy_per_student = total_energy / total_students)
 ```
 
-#### Final Plot 2
+### Final Plot 2
+
 ```{r plot-2}
 ggplot(per_capita) +
   geom_col(aes(
@@ -228,9 +242,10 @@ ggplot(per_capita) +
 
 ```
 
-### Plot 3: Boxplot
+## Plot 3: Boxplot
 
 ### Step 1: Filter Rows for Total Energy Usage
+
 ```{r filter-rows}
 energy_box <- energy |>
   filter(grepl("Total Usage", measurement, ignore.case = TRUE))
@@ -238,6 +253,7 @@ energy_box <- energy |>
 ```
 
 ### Step 2: Convert Monthly Columns to Numeric
+
 ```{r monthly-to-numeric}
 energy_box_numeric <- energy_box |>
   mutate(across(
@@ -248,6 +264,7 @@ energy_box_numeric <- energy_box |>
 ```
 
 ### Step 3: Get Average Monthly Usage
+
 ```{r monthly-average-usage}
 energy_box_numeric <- energy_box_numeric |>
   rowwise() |>
@@ -262,6 +279,7 @@ energy_box_numeric <- energy_box_numeric |>
 ```
 
 ### Step 4: Compute Borough Medians
+
 ```{r medians}
 wealth_boro <- wealth |>
   mutate(
@@ -273,7 +291,9 @@ wealth_boro <- wealth |>
   summarise(median_income = median(Median_Income, na.rm = TRUE))
 
 ```
-#### Final Plot 3
+
+### Final Plot 3
+
 ```{r plot-3}
 ggplot(energy_box_numeric, aes(
   x = borough,
@@ -288,7 +308,9 @@ ggplot(energy_box_numeric, aes(
   theme_minimal()
 
 ```
+
 ### Final Plot 4
+
 ```{r}
 wealth_source <- if (exists("df")) {
   df
@@ -404,82 +426,142 @@ p4 <- ggplot(wealth_boro) +
 p4
 ggsave("plot4-wealth-per-capita-by-borough.png", p4, width = 6, height = 4, dpi = 300)
 ```
+
 ###Final Plot 5
-```{r}
-# --- factors (units -> MMBtu or direct kg CO2) ---
-kwh_to_mmbtu   <- 0.003412
-mlb_to_mmbtu   <- 1.19            # 1,000 lb steam ≈ 1.19 MMBtu (approx.)
-therm_to_mmbtu <- 0.1
-gal_no2_to_mmbtu <- 0.1387
-gal_no4_to_mmbtu <- 0.145
+
+### Step 1: Define Conversion Units
+```{r create-units}
+# Energy → MMBtu
+kwh_to_mmbtu      <- 0.003412
+mlb_to_mmbtu      <- 1.19
+therm_to_mmbtu    <- 0.1
+gal_no2_to_mmbtu  <- 0.1387
+gal_no4_to_mmbtu  <- 0.145
 gal_no56_to_mmbtu <- 0.150
 
+# MMBtu → kg CO₂
 kg_per_mmbtu_gas   <- 53.06
 kg_per_mmbtu_oil2  <- 73.16
 kg_per_mmbtu_oil4  <- 75.29
 kg_per_mmbtu_oil56 <- 78.80
-kg_per_kwh_grid    <- 0.25       
+kg_per_kwh_grid    <- 0.25
+```
+
+### Step 2: Identify Numeric Usage Columns
+```{r id-columns}
 usage_cols_all <- energy |>
   select(-building_address, -borough, -measurement, -postcode, -latitude,
          -longitude, -community_board, -council_district, -census_tract,
          -bin, -bbl, -nta) |>
   colnames()
 
+```
+
+### Step 3: Convert to Numeric
+```{r to-numeric}
 carbon_ready <- energy |>
-  mutate(across(all_of(usage_cols_all), ~ suppressWarnings(as.numeric(.))),
-         total_raw = rowSums(across(all_of(usage_cols_all)), na.rm = TRUE),
-         fuel = case_when(
-           str_detect(measurement, "(?i)electric") ~ "electricity",
-           str_detect(measurement, "(?i)steam")    ~ "steam",
-           str_detect(measurement, "(?i)gas|therm")~ "natural_gas",
-           str_detect(measurement, "(?i)oil.*2")   ~ "oil_2",
-           str_detect(measurement, "(?i)oil.*4")   ~ "oil_4",
-           str_detect(measurement, "(?i)oil.*(5|6)") ~ "oil_56",
-           str_detect(measurement, "(?i)total usage") ~ "total_mmbtu", 
-           TRUE ~ "other"
-         ),
-         borough_name = factor(
-           borough,
-           levels = c("1","2","3","4","5"),
-           labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
-         )) |>
+  mutate(
+    across(all_of(usage_cols_all), ~ suppressWarnings(as.numeric(.))),
+    total_raw = rowSums(across(all_of(usage_cols_all)), na.rm = TRUE)
+  )
+
+```
+
+### Step 4: Classify Fuel Types
+```{r fuel-types}
+carbon_ready <- carbon_ready |>
+  mutate(
+    fuel = case_when(
+      str_detect(measurement, "(?i)electric") ~ "electricity",
+      str_detect(measurement, "(?i)steam")    ~ "steam",
+      str_detect(measurement, "(?i)gas|therm")~ "natural_gas",
+      str_detect(measurement, "(?i)oil.*2")   ~ "oil_2",
+      str_detect(measurement, "(?i)oil.*4")   ~ "oil_4",
+      str_detect(measurement, "(?i)oil.*(5|6)") ~ "oil_56",
+      str_detect(measurement, "(?i)total usage") ~ "total_mmbtu",
+      TRUE ~ "other"
+    ),
+    borough_name = factor(
+      borough,
+      levels = c("1","2","3","4","5"),
+      labels = c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+    )
+  ) |>
   filter(fuel %in% c("electricity","steam","natural_gas","oil_2","oil_4","oil_56"))
 
+```
+
+### Step 5: Convert Fuel Types to kg CO2
+```{r convert-fuel-types}
 carbon_by_row <- carbon_ready |>
   mutate(
     kg_co2 = case_when(
-      fuel == "electricity" ~ total_raw * kg_per_kwh_grid,                               # kWh * kg/kWh
-      fuel == "steam"       ~ total_raw * mlb_to_mmbtu * kg_per_mmbtu_gas,               # mlb -> MMBtu -> kg
-      fuel == "natural_gas" ~ total_raw * therm_to_mmbtu * kg_per_mmbtu_gas,             # therm -> MMBtu
-      fuel == "oil_2"       ~ total_raw * gal_no2_to_mmbtu * kg_per_mmbtu_oil2,          # gal -> MMBtu
-      fuel == "oil_4"       ~ total_raw * gal_no4_to_mmbtu * kg_per_mmbtu_oil4,
-      fuel == "oil_56"      ~ total_raw * gal_no56_to_mmbtu * kg_per_mmbtu_oil56,
+      fuel == "electricity" ~ total_raw * kg_per_kwh_grid,
+
+      fuel == "steam"       ~ total_raw *
+                                mlb_to_mmbtu *
+                                kg_per_mmbtu_gas,
+
+      fuel == "natural_gas" ~ total_raw *
+                                therm_to_mmbtu *
+                                kg_per_mmbtu_gas,
+
+      fuel == "oil_2"       ~ total_raw *
+                                gal_no2_to_mmbtu *
+                                kg_per_mmbtu_oil2,
+
+      fuel == "oil_4"       ~ total_raw *
+                                gal_no4_to_mmbtu *
+                                kg_per_mmbtu_oil4,
+
+      fuel == "oil_56"      ~ total_raw *
+                                gal_no56_to_mmbtu *
+                                kg_per_mmbtu_oil56,
+
       TRUE ~ NA_real_
     )
   )
 
+```
+
+### Step 6: Aggregate to Borough Level
+
+```{r aggregate-boroughs}
 carbon_borough <- carbon_by_row |>
   group_by(borough_name) |>
   summarise(kg_co2 = sum(kg_co2, na.rm = TRUE), .groups = "drop") |>
   mutate(t_co2 = kg_co2 / 1000)
 
-if (!exists("pal")) {
-  pal <- setNames(viridis(5, option = "D"),
-                  c("Manhattan","Bronx","Brooklyn","Queens","Staten Island"))
-}
+```
 
+### Step 7: Set Color Palette
+```{r colors}
+if (!exists("pal")) {
+  pal <- setNames(
+    viridis(5, option = "D"),
+    c("Manhattan","Bronx","Brooklyn","Queens","Staten Island")
+  )
+}
+```
+
+### Final Plot 5
+```{r plot-5}
 p5 <- ggplot(carbon_borough) +
-  geom_col(aes(x = fct_reorder(borough_name, t_co2),
-               y = t_co2,
-               fill = borough_name)) +
+  geom_col(aes(
+    x = fct_reorder(borough_name, t_co2),
+    y = t_co2,
+    fill = borough_name
+  )) +
   scale_fill_manual(values = pal) +
-  labs(title = "Estimated Carbon Emissions by Borough",
-       x = "Borough",
-       y = "tCO2 (estimated)") +
+  labs(
+    title = "Estimated Carbon Emissions by Borough",
+    x = "Borough",
+    y = "tCO₂ (estimated)"
+  ) +
   theme_minimal() +
   theme(legend.position = "none")
 
 p5
-ggsave("plot5-carbon-by-borough.png", p5, width = 6, height = 4, dpi = 300)
+
 ```
 
