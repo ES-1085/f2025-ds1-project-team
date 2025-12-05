@@ -1,6 +1,6 @@
 Project title
 ================
-by Team name
+by jack, Ben, and Margaret
 
 ## Summary
 
