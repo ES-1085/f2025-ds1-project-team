@@ -1,6 +1,6 @@
 Project title
 ================
-by Team name
+by Jack, Ben, and Margaret
 
 ## Summary
 
@@ -15,11 +15,11 @@ your project.
 
 ## Handout
 
-Our handout can be found [here](handout/handout.pdf). You can update the filename and extension of your handout, currently it is called handout.pdf
+Our handout can be found [here](handout/handout.pdf).
 
 ## Memo
 
-A link to the code and how we created our graphics in our memo can be found [here](memo/memo.html).
+A link to the code and how we created our graphics in our memo can be found [here](memo/memo.rmd).
 
 ## Data
 
