@@ -1,6 +1,6 @@
 Project title
 ================
-by jack, Ben, and Margaret
+by Jack, Ben, and Margaret
 
 ## Summary
 
