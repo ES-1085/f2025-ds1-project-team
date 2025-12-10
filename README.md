@@ -14,7 +14,7 @@ Methods
 
 All datasets were obtained from publicly available NYC sources:
 
-School Energy Data (NYC DOE sustainability reporting): monthly mmBTU usage by school and by energy type.
+- **School Energy Data (NYC DOE sustainability reporting)**: monthly mmBTU usage by school and by energy type.
 
 Enrollment Data (NYSED public district enrollment): total PreK–12 student counts by borough.
 
