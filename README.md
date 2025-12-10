@@ -2,104 +2,109 @@ Energy, Emissions, and Equity in NYC Public Schools
 ================
 by Jack, Ben, and Margaret
 
-## Summary
+**Summary**
 
-This project investigates how energy use varies across New York City public schools and how those differences relate to student population and socioeconomic conditions. Our goal was to understand two things:
-(1) Which boroughs consume the most total energy
-(2) How these patterns change once energy use is normalized on a per-student basis, revealing potential inequities in school infrastructure and resource distribution.
+This project investigates how energy use varies across New York City public schools and how those differences relate to student population and socioeconomic conditions. Our goal was to understand two things:  
+- **Which boroughs consume the most total energy**  
+- **How these patterns change once energy use is normalized on a per-student basis**, revealing potential inequities in school infrastructure and resource distribution.
 
 We also incorporated an estimated carbon emissions model to compare energy consumption with environmental impact and combined these findings with neighborhood financial health data to explore whether school energy intensity corresponds with socioeconomic conditions. These analyses give insight into how wealth, enrollment, and building efficiency combine to produce uneven energy and carbon outcomes across the city.
 
-Methods
+---
+
+**Methods**
 
 All datasets were obtained from publicly available NYC sources:
 
-- **School Energy Data (NYC DOE sustainability reporting)**: monthly mmBTU usage by school and by energy type.
+- **School Energy Data** (NYC DOE sustainability reporting): monthly mmBTU usage by school and by energy type.  
+- **Enrollment Data** (NYSED public district enrollment): total PreK–12 student counts by borough.  
+- **Neighborhood Financial Health Data**: median household income and demographic indicators.
 
-Enrollment Data (NYSED public district enrollment): total PreK–12 student counts by borough.
+Data were cleaned in R using **tidyverse**. Major steps were:
 
-Neighborhood Financial Health Data: median household income and demographic indicators.
+- **Variable assignment, cleaning, and mutates**  
+- **Converting DOE energy tables to numeric formats** and computing total annual mmBTU use for each school  
+- **Mapping borough codes (1–5)** to borough names  
+- **Aggregating** to borough-level totals  
+- **Normalizing usage** by creating energy-per-student metrics  
+- **Estimating carbon emissions** using approximate DOE conversion factors  
+- **Aggregating median household income** by borough using the financial-health dataset  
 
-Data were cleaned in R using tidyverse. Major steps were:
+Graphics were produced using **ggplot2** with a **colorblind-safe viridis palette**.
 
-Variable assignment, cleaning, and mutates
+---
 
-Converting DOE energy tables to numeric formats and computing total annual mmBTU use for each school.
+**Analysis**
 
-Mapping borough codes (1–5) to borough names.
-
-Aggregating to borough-level totals.
-
-Normalizing usage by creating energy-per-student metrics.
-
-Estimating carbon emissions using approximate DOE conversion factors.
-
-Aggregating median household income by borough using the financial-health dataset.
-
-Graphics were produced using ggplot2 with a colorblind-safe viridis palette.
-
-Analysis
-Total School Energy Usage (Plot 1)
-
+### **Total School Energy Usage (Plot 1)**  
 Manhattan shows the highest total energy consumption, followed by the Bronx and Brooklyn. Queens and Staten Island consume substantially less. Since this plot reflects raw mmBTU totals, boroughs with more schools and larger buildings dominate the upper range. This establishes a baseline for understanding how physical size and infrastructure drive energy use independent of student population.
 
-Energy Per Student (Plot 2)
+---
 
+### **Energy Per Student (Plot 2)**  
 After normalizing by enrollment, Manhattan still leads, but the ordering of the middle boroughs reverses:
 
-Queens falls to the lowest per-student usage.
-
-The Bronx rises into the upper tier.
+- **Queens falls to the lowest per-student usage**
+- **The Bronx rises into the upper tier**
 
 This Bronx–Queens inversion is consistent with differences in building age, efficiency, and maintenance backlog, which are documented in several NYC infrastructure audits. Queens’ school buildings tend to be newer or better insulated, while many Bronx facilities are older, steam-heated, and less efficient relative to the number of students they serve.
 
-This supports our major finding: energy intensity is not determined solely by total demand, but by the interaction of resources, building conditions, and enrollment.
+This supports our major finding: **energy intensity is not determined solely by total demand, but by the interaction of resources, building conditions, and enrollment.**
 
-Average Monthly Usage (Box Plot, Plot 3)
+---
 
+### **Average Monthly Usage (Plot 3 – Box Plot)**  
 Monthly distributions further illustrate these differences. Manhattan and the Bronx show wide variance, indicating inconsistent or inefficient energy patterns across their schools. Queens shows the tightest distribution, reinforcing its relative efficiency. This aligns with the per-student analysis: boroughs with newer, standardized buildings show more stable monthly usage.
 
-Wealth Per Capita (Plot 4)
+---
 
-Median household income increases from the Bronx → Brooklyn → Queens → Staten Island → Manhattan. When combined with Plot 2, a pattern emerges:
-Wealthier boroughs generally have lower energy use per student, despite higher total usage.
-This suggests better-maintained buildings, upgraded heating systems, and more consistent access to capital improvements.
+### **Wealth Per Capita (Plot 4)**  
+Median household income increases from:  
+**Bronx → Brooklyn → Queens → Staten Island → Manhattan.**
 
-Estimated Carbon Emissions (Plot 5)
+When combined with Plot 2, a pattern emerges:
 
+- **Wealthier boroughs generally have lower energy use per student**, despite higher total usage.  
+- This suggests better-maintained buildings, upgraded heating systems, and more consistent access to capital improvements.
+
+---
+
+### **Estimated Carbon Emissions (Plot 5)**  
 Estimated emissions track closely with total usage rather than per-student usage. This reinforces that Manhattan’s large building stock—not necessarily inefficiency—drives its carbon footprint. The borough ranking matches Plot 1 almost exactly, confirming strong alignment between mmBTU consumption and CO₂ output when fuel mixes are similar.
 
-Taken together, Plots 1 & 5 show the scale of borough emissions, while Plots 2 & 4 reveal efficiency and equity questions.
+Taken together:  
+- **Plots 1 & 5** show the *scale* of borough emissions.  
+- **Plots 2 & 4** reveal *efficiency and equity* questions.  
+- **Plot 3** highlights *building-level stability vs. volatility*.  
 
-Conclusions
+---
+
+**Conclusions**
 
 Our findings show that:
 
-Total energy use is dominated by borough size and number of schools.
+- **Total energy use is dominated by borough size and number of schools.**  
+- **Energy-per-student metrics reveal hidden inequities**, with the Bronx using far more energy per student than Queens despite similar total usage.  
+- **These differences align with disparities in building age, maintenance investment, and renovation cycles.**  
+- **Wealthier boroughs tend to have more efficient buildings and more stable monthly usage patterns.**  
+- **Carbon emissions follow raw energy totals**, meaning boroughs with the highest usage—not necessarily inefficient buildings—produce the most emissions.  
+- However, the box plot reveals that **lower-income boroughs face greater instability and inefficiency**, while wealthier boroughs have more stable, efficient systems that deliver more energy per student.
 
-Energy-per-student metrics reveal hidden inequities, with the Bronx using far more energy per student than Queens despite similar total usage.
+---
 
-These differences align with long-documented disparities in school building age, maintenance investment, and renovation cycles.
+**Limitations**
 
-Wealthier boroughs tend to have both more efficient buildings and more stable monthly usage patterns.
+- **Fuel type breakdown was not available**, limiting the accuracy of carbon estimates.  
+- **School-level infrastructure quality data were unavailable** for direct inclusion.  
+- **Wealth was represented by median household income**, which is a proxy, not a school-specific measure.
 
-Carbon emissions follow raw energy totals closely, meaning boroughs with the highest usage—not necessarily those with the worst efficiency—produce the most emissions. However, the box plot gave us some insight: lower-income boroughs face greater instability and inefficiency in energy use, while wealthier boroughs have more stable, efficient systems that deliver more energy per student.
+---
 
-Limitations
+**Future Directions**
 
-We cannot separate fuel types with precision, limiting the accuracy of carbon estimates.
-
-School-level infrastructure quality data were not available for direct inclusion.
-
-Wealth was represented by median household income, which is a proxy, not a school-specific measure.
-
-Future Directions
-
-Incorporate building age and renovation data (DOE’s Building Condition Survey).
-
-Break down energy by fuel source for more accurate carbon modeling.
-
-Map school-level variation using geospatial methods.
+- Incorporate **building age and renovation data** (DOE’s Building Condition Survey).  
+- Break down energy by **fuel source** for more accurate carbon modeling.  
+- Explore **geospatial mapping** to visualize neighborhood-level disparities.
 
 ## Handout
 
