@@ -1,13 +1,34 @@
-# data
+School Energy Usage and Socioeconomic Factors
+================
+by Team
 
-Place data file(s) in this folder. Add the dimensions (rows and columns).
+## Summary
 
-Then, include codebooks (variables, and their descriptions) for your data file(s)
-using the following format.
+Write-up of your project and findings go here. Think of this as the text
+of your handout. The length should be roughly 5 minutes when read
+out loud. Although pacing varies, a 5-minute speech is roughly 750
+words. 
 
-## name of data file
+Your results with proper output and
+graphics go in your handout, this space is for a brief summary of
+your project.
 
-- `variable1`: Description of variable 1
-- `variable2`: Description of variable 2
-- `variable3`: Description of variable 3
-- ...
+## Handout
+
+Our handout can be found [here](handout/handout.pdf). You can update the filename and extension of your handout, currently it is called handout.pdf
+
+## Memo
+
+A link to the code and how we created our graphics in our memo can be found [here](memo/memo.html).
+
+## Data
+
+Include a citation for your data here. See
+<http://libraryguides.vu.edu.au/c.php?g=386501&p=4347840> for guidance
+on proper citation for datasets. If you got your data off the web, make
+sure to note the retrieval date.
+
+## References
+
+List any references here. You should, at a minimum, list your data
+source.
