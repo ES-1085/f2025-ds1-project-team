@@ -110,9 +110,13 @@ Our findings show that:
 
 Our handout can be found [here](handout/handout.pdf).
 
+---
+
 ## Memo
 
 A link to the code and how we created our graphics in our memo can be found [here](memo/memo.html).
+
+---
 
 ## Data
 
@@ -124,6 +128,8 @@ New York State Education Department. 2024. Public School Enrollment Data, 2024â€
 
 New York City Mayorâ€™s Office for Economic Opportunity. 2022. Neighborhood Financial Health Digital Mapping and Data Tool. NYC Opportunity. https://data.cityofnewyork.us
 . Accessed 5 December 2025.
+
+---
 
 ## References
 
